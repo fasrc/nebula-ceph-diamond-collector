@@ -67,7 +67,10 @@ class NebulaCephCollector(ceph.CephCollector):
         vm_hash = {}
         for vm in vm_xml_etree.findall("VM"):
             vm_id = vm.find("ID").text
-            vm_hostname = vm.find("*//HOSTNAME").text
+            try:
+                vm_hostname = vm.find("*//HOSTNAME").text
+            except:
+                vm_hostname = ''
             if vm_hostname == hostname:
                 try:
                     vm_diamond_prefix = vm.find("*//DIAMOND_PREFIX").text
