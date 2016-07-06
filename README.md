@@ -13,7 +13,11 @@ This collector extends CephCollector from diamond and gathers metrics for OpenNe
 
 This queries OpenNebula frontend to gather vms on the current hypervisor and uses the qemu PIDs for those vms to selects Ceph admin sockets and gathers metrics for those RBD devices.
 
-Metrics sent to graphite are of the form: '<diamond_prefix>.<vmid>.<cctid>.<metric name...>', note that prefix is in addition to the global prefix already set in diamond.
+Metrics sent to graphite are of the form: 
+
+    '<diamond_prefix>.<vmid>.<cctid>.<metric name...>'
+
+(note that prefix is in addition to the global prefix already set in diamond)
 
 ## Usage
 
