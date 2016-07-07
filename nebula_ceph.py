@@ -148,4 +148,4 @@ class NebulaCephCollector(ceph.CephCollector):
                     self.log.debug('found device %s' % device)
                     prefix = "%s.%s.%s.%s" % (vm_hash['diamond_prefix'],
                                               vmid, vm_hash['name'], device)
-                    self._publish_stats(prefix, stat)
+                    self._publish_stats(prefix, stats[stat])
