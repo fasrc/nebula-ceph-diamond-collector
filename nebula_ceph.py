@@ -18,6 +18,9 @@ import re
 import ceph
 
 PID_CCTID_REGEX = "ceph-([0-9]*)\.([0-9]*).*"
+RBD_STAT_RE = "^librbd.*(one(?:-[0-9]*){1,3})"
+METRIC_CHARS_RE = "[a-zA-Z0-9_-]"
+METRIC_NAME_MAX_LEN = 255
 
 
 class NebulaCephCollector(ceph.CephCollector):
@@ -61,6 +64,15 @@ class NebulaCephCollector(ceph.CephCollector):
             pid = open(qemu_pid_file).read()
             return pid
 
+    def _validate_metric_name(self, string):
+        validated_string = ''
+        for char in string[:METRIC_NAME_MAX_LEN-1]:
+            if re.search(METRIC_CHARS_RE, char):
+                validated_string += char
+            else:
+                validated_string += '_'
+        return validated_string
+
     def _get_nebula_vms(self):
         """Return a hash of OpenNebula vms with pid and diamond_prefix
         """
@@ -76,21 +88,24 @@ class NebulaCephCollector(ceph.CephCollector):
             vm_hostname_element = vm.find("*//HOSTNAME")
             if vm_hostname_element is None:
                 # this vm is undeployed or pending, so skip it
-                vm_hostname = ''
+                continue
+            vm_hostname = vm_hostname_element.text
+            if vm_hostname not in [hostname, fqdn]:
+                continue
+            vm_id = vm.find("ID").text
+            pid = self._get_vm_pid(vm_id)
+            if not pid:
+                continue
+            vm_name = self._validate_metric_name(vm.find("NAME").text)
+            vm_diamond_prefix_element = vm.find("*//DIAMOND_PREFIX")
+            if vm_diamond_prefix_element is None:
+                # no diamond prefix in template, so set to default
+                vm_diamond_prefix = self.config['default_prefix']
             else:
-                vm_hostname = vm_hostname_element.text
-            if vm_hostname == hostname or vm_hostname == fqdn:
-                vm_id = vm.find("ID").text
-                pid = self._get_vm_pid(vm_id)
-                if pid:
-                    vm_diamond_prefix_element = vm.find("*//DIAMOND_PREFIX")
-                    if vm_diamond_prefix_element is None:
-                        # no diamond prefix in template, so set to default
-                        vm_diamond_prefix = self.config['default_prefix']
-                    else:
-                        vm_diamond_prefix = vm_diamond_prefix_element.text
-                    vm_hash[vm_id] = dict(diamond_prefix=vm_diamond_prefix,
-                                          pid=pid)
+                vm_diamond_prefix = self.validate_metric_name(
+                    vm_diamond_prefix_element.text)
+            vm_hash[vm_id] = dict(diamond_prefix=vm_diamond_prefix,
+                                  pid=pid, name=vm_name)
         return vm_hash
 
     def _get_socket_paths(self):
@@ -109,6 +124,11 @@ class NebulaCephCollector(ceph.CephCollector):
                 path_arr.append(dict(pid=pid, cctid=cctid, path=path))
         return path_arr
 
+    def _get_rbd_device_from_stat(self, stat):
+        rbd_device = re.match(RBD_STAT_RE, stat)
+        if rbd_device:
+            return rbd_device.groups()[0]
+
     def collect(self):
         """
         Collect stats for OpenNebula vms rbd devices
@@ -119,7 +139,13 @@ class NebulaCephCollector(ceph.CephCollector):
             sockets = [socket for socket in socket_path_arr if
                        socket['pid'] == vm_hash['pid']]
             for socket_hash in sockets:
-                prefix = "%s.%s.%s" % (vm_hash['diamond_prefix'],
-                                       vmid, socket_hash['cctid'])
+                self.log.debug('found socket')
                 stats = self._get_stats_from_socket(socket_hash['path'])
-                self._publish_stats(prefix, stats)
+                for stat in stats:
+                    device = self._get_rbd_device_from_stat(stat)
+                    if not device:
+                        continue
+                    self.log.debug('found device %s' % device)
+                    prefix = "%s.%s.%s.%s" % (vm_hash['diamond_prefix'],
+                                              vmid, vm_hash['name'], device)
+                    self._publish_stats(prefix, stat)
