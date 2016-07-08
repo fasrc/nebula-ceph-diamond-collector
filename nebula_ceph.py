@@ -103,7 +103,7 @@ class NebulaCephCollector(ceph.CephCollector):
                 # no diamond prefix in template, so set to default
                 vm_diamond_prefix = self.config['default_prefix']
             else:
-                vm_diamond_prefix = self.validate_metric_name(
+                vm_diamond_prefix = self._validate_metric_name(
                     vm_diamond_prefix_element.text)
             vm_hash[vm_id] = dict(diamond_prefix=vm_diamond_prefix,
                                   pid=pid, name=vm_name)
