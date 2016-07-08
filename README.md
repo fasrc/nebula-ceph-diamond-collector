@@ -15,7 +15,7 @@ This queries OpenNebula frontend to gather vms on the current hypervisor and use
 
 Metrics sent to graphite are of the form: 
 
-    '<diamond_prefix>.<vmid>.<cctid>.<metric name...>'
+    '<instance_prefix>.<vmid>.<diamond_prefix>.<vm name>.<rbd device name>.<metric name>'
 
 (note that prefix is in addition to the global prefix already set in diamond)
 
@@ -32,4 +32,5 @@ Metrics sent to graphite are of the form:
 ## Optional config
 
 - nebula_template_prefix_variable - if needed to override for certain vms. This allows to set different diamond prefixes by using a onevm template variable
-- default_prefix - this is the default prefix to be added in diamond; defaults to 'vms'
+- default_prefix - this is the default prefix to be added in diamond; defaults to 'nebulaceph'
+- optionally change diamond's instance_prefix, default is 'instances'

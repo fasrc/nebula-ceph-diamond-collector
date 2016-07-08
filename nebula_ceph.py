@@ -36,7 +36,8 @@ class NebulaCephCollector(ceph.CephCollector):
                 'OpenNebula VM Template variable to customize diamond prefix.'
                 ' Defaults to "DIAMOND_PREFIX"',
             'default_prefix':
-                'Default prefix to add if not overriding. Defaults to "vms"',
+                'Default prefix to add if not overriding. Defaults to'
+                ' "nebulaceph"',
             'qemu_pid_path':
                 'The location of the qemu pid files. Defaults to'
                 ' "/var/run/libvirt/qemu"',
@@ -51,7 +52,7 @@ class NebulaCephCollector(ceph.CephCollector):
         config.update({
             'pid_cctid_regex': PID_CCTID_REGEX,
             'prefix_variable': 'DIAMOND_PREFIX',
-            'default_prefix': 'vms',
+            'default_prefix': 'nebulaceph',
             'qemu_pid_path': '/var/run/libvirt/qemu',
         })
         return config
@@ -129,6 +130,16 @@ class NebulaCephCollector(ceph.CephCollector):
         if rbd_device:
             return rbd_device.groups()[0]
 
+    def _publish_stats(self, counter_prefix, stats, instance):
+        """Given a stats dictionary from _get_stats_from_socket,
+        publish the individual values.
+        """
+        for stat_name, stat_value in ceph.flatten_dictionary(
+            stats,
+            prefix=counter_prefix,
+        ):
+            self.publish_gauge(stat_name, stat_value, instance=instance)
+
     def collect(self):
         """
         Collect stats for OpenNebula vms rbd devices
@@ -146,6 +157,7 @@ class NebulaCephCollector(ceph.CephCollector):
                     if not device:
                         continue
                     self.log.debug('found device %s' % device)
-                    prefix = "%s.%s.%s.%s" % (vm_hash['diamond_prefix'],
-                                              vmid, vm_hash['name'], device)
-                    self._publish_stats(prefix, stats[stat])
+                    prefix = "%s.%s.%s" % (vm_hash['diamond_prefix'],
+                                              vm_hash['name'], device)
+                    self._publish_stats(counter_prefix=prefix,
+                                        stats=stats[stat], instance=vmid)
