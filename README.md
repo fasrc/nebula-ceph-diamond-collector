@@ -9,13 +9,17 @@ These collectors are intended to be used with diamond [diamond](https://github.c
 
 ## NebulaCephCollector
 
-This collector extends CephCollector from diamond and gathers metrics for OpenNebula VM disks on Ceph.
+This collector extends CephCollector from diamond and gathers metrics for
+OpenNebula VM disks on Ceph.
 
-This queries OpenNebula frontend to gather vms on the current hypervisor and uses the qemu PIDs for those vms to selects Ceph admin sockets and gathers metrics for those RBD devices.
+This queries OpenNebula frontend to gather vms on the current hypervisor and
+uses the qemu PIDs for those vms to selects Ceph admin sockets and gathers
+metrics for those RBD devices.
 
 Metrics sent to graphite are of the form: 
 
-    '<instance_prefix>.<vmid>.<diamond_prefix>.<vm name>.<rbd device name>.<metric name>'
+    '<instance_prefix>.<vmid>.NebulaCephCollector.<diamond_prefix>.<vm name>.
+    <rbd device name>.<metric name>'
 
 (note that prefix is in addition to the global prefix already set in diamond)
 
@@ -31,6 +35,6 @@ Metrics sent to graphite are of the form:
 
 ## Optional config
 
-- nebula_template_prefix_variable - if needed to override for certain vms. This allows to set different diamond prefixes by using a onevm template variable
+- nebula_template_prefix_variable - if needed to override for certain vms. This allows to set different diamond prefixes by using a onevm template variable; this can allow to set different storage schemas in graphite for different vms (e.g., shorter retention for test vms)
 - default_prefix - this is the default prefix to be added in diamond; defaults to 'nebulaceph'
 - optionally change diamond's instance_prefix, default is 'instances'
