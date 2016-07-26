@@ -41,6 +41,15 @@ class NebulaCephCollector(ceph.CephCollector):
             'qemu_pid_path':
                 'The location of the qemu pid files. Defaults to'
                 ' "/var/run/libvirt/qemu"',
+            'one_auth':
+                'Path to opennebula one_auth file. Defaults to unset (uses'
+                ' system env or opennebula default, $HOME/.one/one_auth)',
+            'one_xmlrpc':
+                'ONE_XMLRPC url. Defaults to unset (uses system env or'
+                ' opennebula default, http://localhost:2633/RPC2)',
+            'onecli_path':
+                'Path to opennebula cli if needed. Defaults to unset'
+                ' (uses system path)',
         })
         return config_help
 
@@ -54,6 +63,9 @@ class NebulaCephCollector(ceph.CephCollector):
             'prefix_variable': 'DIAMOND_PREFIX',
             'default_prefix': 'nebulaceph',
             'qemu_pid_path': '/var/run/libvirt/qemu',
+            'one_auth': None,
+            'one_xmlrpc': None,
+            'onecli_path': None,
         })
         return config
 
@@ -79,8 +91,18 @@ class NebulaCephCollector(ceph.CephCollector):
         """
         hostname = socket.gethostname()
         fqdn = socket.getfqdn()
-        args = shlex.split('onevm list -x')
-        vm_xml_list = subprocess.Popen(args, stdout=subprocess.PIPE)
+        if self.config['onecli_path']:
+            onevm_command = '%s/onevm' % self.config['onecli_path']
+        else:
+            onevm_command = 'onevm'
+        args = shlex.split('%s list -x' % onevm_command)
+        my_env = os.environ.copy()
+        if self.config['one_auth']:
+            my_env['ONE_AUTH'] = self.config['one_auth']
+        if self.config['one_xmlrpc']:
+            my_env['ONE_XMLRPC'] = self.config['one_xmlrpc']
+        vm_xml_list = subprocess.Popen(args, stdout=subprocess.PIPE,
+                                       env=my_env)
         vm_xml_arr = vm_xml_list.stdout.readlines()
         vm_xml_string = ''.join([line.strip("\n") for line in vm_xml_arr])
         vm_xml_etree = xml.etree.ElementTree.fromstring(vm_xml_string)
