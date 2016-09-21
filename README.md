@@ -1,10 +1,12 @@
 # nebula-ceph-diamond-collector
 
-Diamond collectors for OpenNebula VM disks on Ceph
+Diamond collector for OpenNebula VM disks on Ceph
 
 ## Description
 
-These collectors are intended to be used with diamond [diamond](https://github.com/python-diamond/Diamond) to ship stats to [graphite](http://graphite.wikidot.com/ "Graphite"). This collector allows to gather Ceph performance data for OpenNebula VMs disks on Ceph.
+This collector is intended to be used with [diamond](https://github.com/python-diamond/Diamond) to ship stats to [graphite](http://graphite.wikidot.com/)/[grafana](http://grafana.org/).
+
+This collector allows to gather Ceph performance data for OpenNebula VMs disks on Ceph.
 
 
 ## NebulaCephCollector
@@ -18,23 +20,26 @@ metrics for those RBD devices.
 
 Metrics sent to graphite are of the form: 
 
-    '<instance_prefix>.<vmid>.NebulaCephCollector.<diamond_prefix>.<vm name>.
-    <rbd device name>.<metric name>'
+    <instance_prefix>.<vmid>.NebulaCephCollector.<diamond_prefix>.<vm name>.
+    <rbd device name>.<metric name>
 
-(note that prefix is in addition to the global prefix already set in diamond)
+(note that instance_prefix is customized once per host (hypervisor) in diamond configuration, and diamond_prefix is customized per vm based on an opennebula vm template variable)
 
 ## Usage
 
-- install opennebula cli gem on the hypervisors
-- setup credentials for the root user on the hypervisors to authenticate to the OpenNebula frontend (one_auth file)
-- setup root's bashrc to export ONE_XMLRPC (with the url to the frontend), and ONE_AUTH (with a path to the one_auth file)
+### Prerequisites
+- install opennebula-cli gem (or yum package opennebula) on the hypervisors
+- setup one_auth file on the hypervisors with credentials to authenticate to the OpenNebula frontend
+- setup ceph admin socket in ceph.conf on the hypervisors (this is not enabled by default for ceph clients, format like `admin_socket = /full/path/$cluster-$pid.$cctid.asok`)
 
-- setup ceph admin socket in ceph.conf (not on by default for ceph clients)
-- configure pid_cctid_regex in diamond for this collector to match the format of the asok name in ceph.conf (this is for this collector to select PID and CCTID from the socket name; the first matching group should be pid and the second is cctid)
-- also configure socket_path and socket_prefix and socket_ext if needed (see Diamond Ceph collector)
+### Configuration variables for this diamond collector
+- one_xmlrpc: url to the frontend
+- one_auth: path to the one_auth file
+- pid_cctid_regex: regex to select PID and CCTID from the socket name; the first matching group should be pid and the second is cctid; must match the format of the asok name in ceph.conf
+- socket_path, and socket_prefix/socket_ext if needed (see Diamond Ceph collector)
 
-## Optional config
+### Optional config
 
-- nebula_template_prefix_variable - if needed to override for certain vms. This allows to set different diamond prefixes by using a onevm template variable; this can allow to set different storage schemas in graphite for different vms (e.g., shorter retention for test vms)
-- default_prefix - this is the default prefix to be added in diamond; defaults to 'nebulaceph'
-- optionally change diamond's instance_prefix, default is 'instances'
+- nebula_template_prefix_variable - if needed to override diamond_prefix for certain vms. This allows to set different diamond prefixes by using a onevm template variable; this can allow to set different storage schemas in graphite for different vms (e.g., shorter retention for test vms)
+- default_prefix - this is the default value for diamond_prefix; defaults to 'nebulaceph'
+- optionally change diamond's instance_prefix, default in diamond is 'instances'
